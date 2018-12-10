@@ -1,0 +1,71 @@
+---
+title: "Coursera Practical Machine Learning"
+author: "Jonathan Cempron"
+date: "10 December 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Outputs of devices that measures movement for health purposes are examined. Examined on how well the exercise was performed by the user. This paper presents the best predictors to be used, given the outputs of the device, that will determine how well the exercise was performed by the user 
+
+## Data Cleaning
+
+As shown below the data contains several information that are useless for our predictor. Such as the name of the participant etc.
+
+```{R}
+library(ggplot2)
+library(caret)
+library(randomForest)
+pmlTrain = read.csv("pml-training.csv")
+str(pmlTrain)
+``` 
+
+The following are performed to clean the data. Columns with no significant variances are removed as these are not good predictors. First columns are removed because these are not usefeul four our use as well.
+
+
+```{R}
+columnRemove <- which(colSums(is.na(pmlTrain) |pmlTrain=="")>0.9*dim(pmlTrain)[1])
+pmlTrain = pmlTrain[,-columnRemove] 
+pmlTrain = pmlTrain[,-(1:6)]
+pmlTrain = pmlTrain[complete.cases(pmlTrain),]
+inTrain = createDataPartition(y=pmlTrain$classe, p=0.7, list=F)
+training = pmlTrain[inTrain,]
+testing = pmlTrain[-inTrain,]
+str(training)
+``` 
+
+## Choosing Model
+
+Two models was tested as predictor: namely predicting with trees and random forests.
+
+Predicting with trees was tested with and without preprocessing. The resulting accuracy of around 50% is achieved without preprocessing using principal component analysis
+
+```{R}
+set.seed(123)
+modFit = train(classe~., method="rpart", data=training)
+predictions = predict(modFit, newdata=testing)
+print(confusionMatrix(predictions, testing$classe))
+``` 
+
+It seems that the principal component analysis preprocess performed shows less accuracy then the one without preprocessing.
+
+```{R}
+set.seed(123)
+modFit = train(classe~., method="rpart", data=training, preProcess = "pca")
+predictions = predict(modFit, newdata=testing)
+print(confusionMatrix(predictions, testing$classe))
+``` 
+
+Random forests was also performed and yielded better results of around 99% accuracy. Thus this, random forest is our chosen model for prediction.
+
+```{R}
+set.seed(123)
+modFit = randomForest(classe~., data=training)
+predictions = predict(modFit, newdata=testing)
+print(confusionMatrix(predictions, testing$classe))
+``` 
